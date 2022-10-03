@@ -1,0 +1,3 @@
+https://developer.lightbend.com/guides/akka-quickstart-scala/
+
+https://doc.akka.io/docs/akka/2.6/typed/guide/tutorial_1.html
