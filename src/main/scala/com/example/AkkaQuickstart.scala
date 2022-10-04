@@ -1,22 +1,27 @@
 package com.example
 
+import akka.actor.typed.ActorSystem
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.ActorSystem
+
+import java.util.concurrent.TimeUnit
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 object EchoActor {
     final case class EchoRequest(content: String)
 
-    def apply(): Behavior[EchoRequest] = Behaviors.receive {
-        (context, message) =>
-            println(message.content)
-            Behaviors.same
-    }
+    def apply(wordList: List[String]): Behavior[EchoRequest] =
+        Behaviors.receive { (context, message) =>
+            val newList = wordList.appended(message.content)
+            println(s"current word List: $newList")
+            EchoActor(newList)
+        }
 }
 
 object RootActor {
     def apply(): Behavior[String] = Behaviors.setup { context =>
-        val echoActor = context.spawn(EchoActor(), "echoActor")
+        val echoActor = context.spawn(EchoActor(List[String]()), "echoActor")
         Behaviors.receiveMessage { message =>
             echoActor ! EchoActor.EchoRequest(message)
             Behaviors.same
@@ -26,5 +31,7 @@ object RootActor {
 
 object AkkaQuickstart extends App {
     val root = ActorSystem(RootActor(), "rootActor")
-    root ! "DEBUG"
+    root ! "apple"
+    root ! "orange"
+    root ! "banana"
 }
