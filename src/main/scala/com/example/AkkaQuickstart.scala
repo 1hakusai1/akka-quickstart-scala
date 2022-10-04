@@ -11,6 +11,7 @@ import scala.concurrent.duration.Duration
 object FifoActor {
     trait FifoRequest
     final case class PutRequest(content: String) extends FifoRequest
+    final case class PopRequest() extends FifoRequest
 
     def apply(wordList: List[String]): Behavior[FifoRequest] =
         Behaviors.receive { (context, message) =>
@@ -19,6 +20,17 @@ object FifoActor {
                     val newList = wordList.appended(content)
                     println(s"current word List: $newList")
                     FifoActor(newList)
+                }
+                case PopRequest() => {
+                    if (wordList.isEmpty) {
+                        println("EMPTY!!! Can't pop")
+                        Behaviors.same
+                    } else {
+                        val popped :: remain = wordList
+                        println(s"popped: $popped")
+                        println(s"current word List: $remain")
+                        FifoActor(remain)
+                    }
                 }
                 case _ => {
                     println("Not implmented")
@@ -43,4 +55,11 @@ object AkkaQuickstart extends App {
     root ! FifoActor.PutRequest("apple")
     root ! FifoActor.PutRequest("orange")
     root ! FifoActor.PutRequest("banana")
+    root ! FifoActor.PopRequest()
+    root ! FifoActor.PopRequest()
+    root ! FifoActor.PopRequest()
+    root ! FifoActor.PopRequest()
+    root ! FifoActor.PopRequest()
+    root ! FifoActor.PopRequest()
+    root ! FifoActor.PutRequest("grape")
 }
