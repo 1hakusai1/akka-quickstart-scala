@@ -38,8 +38,9 @@ class Main(context: ActorContext[String])
     override def onMessage(msg: String): Behavior[String] =
         msg match {
             case "start" =>
-                val first = context.spawn(StartStopActor1(), "first")
-                first ! "stop"
+                val supervisingActor =
+                    context.spawn(SupervisingActor(), "supervising-actor")
+                supervisingActor ! "failChild"
                 this
         }
 }
@@ -82,6 +83,50 @@ class StartStopActor2(context: ActorContext[String])
             this
     }
 
+}
+object SupervisingActor {
+    def apply(): Behavior[String] =
+        Behaviors.setup(context => new SupervisingActor(context))
+}
+
+class SupervisingActor(context: ActorContext[String])
+    extends AbstractBehavior[String](context) {
+    private val child = context.spawn(
+      Behaviors
+          .supervise(SupervisedActor())
+          .onFailure(typed.SupervisorStrategy.restart),
+      name = "supervised-actor"
+    )
+
+    override def onMessage(msg: String): Behavior[String] =
+        msg match {
+            case "failChild" =>
+                child ! "fail"
+                this
+        }
+}
+
+object SupervisedActor {
+    def apply(): Behavior[String] =
+        Behaviors.setup(context => new SupervisedActor(context))
+}
+class SupervisedActor(context: ActorContext[String])
+    extends AbstractBehavior[String](context) {
+    println("supervised actor started")
+    override def onMessage(msg: String): Behavior[String] =
+        msg match {
+            case "fail" =>
+                println("supervised actor fails now")
+                throw new Exception("I failed!")
+        }
+    override def onSignal: PartialFunction[typed.Signal, Behavior[String]] = {
+        case typed.PreRestart =>
+            println("supervised actor will be restarted")
+            this
+        case typed.PostStop =>
+            println("supervised actor stopped")
+            this
+    }
 }
 
 object ActorHierarchyExperiments extends App {
