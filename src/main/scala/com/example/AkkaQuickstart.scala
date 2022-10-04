@@ -42,9 +42,9 @@ object FifoActor {
 
 object RootActor {
     def apply(): Behavior[FifoActor.FifoRequest] = Behaviors.setup { context =>
-        val echoActor = context.spawn(FifoActor(List[String]()), "echoActor")
+        val fifoActor = context.spawn(FifoActor(List[String]()), "fifoActor")
         Behaviors.receiveMessage { message =>
-            echoActor ! message
+            fifoActor ! message
             Behaviors.same
         }
     }
