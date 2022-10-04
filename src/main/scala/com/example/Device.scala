@@ -18,7 +18,12 @@ object Device {
         replyTo: ActorRef[RespondTemparature]
     ) extends Command
     final case class RespondTemparature(requestId: Long, value: Option[Double])
-        extends Command
+    final case class RecordTemparature(
+        requestId: Long,
+        value: Double,
+        replyTo: ActorRef[TemparatureRecorded]
+    ) extends Command
+    final case class TemparatureRecorded(requestId: Long)
 }
 
 class Device(
@@ -33,6 +38,15 @@ class Device(
 
     override def onMessage(msg: Device.Command): Behavior[Device.Command] = {
         msg match {
+            case RecordTemparature(id, value, replyTo) =>
+                context.log.info(
+                  "Recorded temparature reading {} with {}",
+                  value,
+                  id
+                )
+                lastTemparatureReading = Some(value)
+                replyTo ! TemparatureRecorded(id)
+                this
             case ReadTemperature(id, replyTo) =>
                 replyTo ! RespondTemparature(id, lastTemparatureReading)
                 this
