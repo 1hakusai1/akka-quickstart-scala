@@ -8,22 +8,31 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-object EchoActor {
-    final case class EchoRequest(content: String)
+object FifoActor {
+    trait FifoRequest
+    final case class PutRequest(content: String) extends FifoRequest
 
-    def apply(wordList: List[String]): Behavior[EchoRequest] =
+    def apply(wordList: List[String]): Behavior[FifoRequest] =
         Behaviors.receive { (context, message) =>
-            val newList = wordList.appended(message.content)
-            println(s"current word List: $newList")
-            EchoActor(newList)
+            message match {
+                case PutRequest(content) => {
+                    val newList = wordList.appended(content)
+                    println(s"current word List: $newList")
+                    FifoActor(newList)
+                }
+                case _ => {
+                    println("Not implmented")
+                    Behaviors.same
+                }
+            }
         }
 }
 
 object RootActor {
-    def apply(): Behavior[String] = Behaviors.setup { context =>
-        val echoActor = context.spawn(EchoActor(List[String]()), "echoActor")
+    def apply(): Behavior[FifoActor.FifoRequest] = Behaviors.setup { context =>
+        val echoActor = context.spawn(FifoActor(List[String]()), "echoActor")
         Behaviors.receiveMessage { message =>
-            echoActor ! EchoActor.EchoRequest(message)
+            echoActor ! message
             Behaviors.same
         }
     }
@@ -31,7 +40,7 @@ object RootActor {
 
 object AkkaQuickstart extends App {
     val root = ActorSystem(RootActor(), "rootActor")
-    root ! "apple"
-    root ! "orange"
-    root ! "banana"
+    root ! FifoActor.PutRequest("apple")
+    root ! FifoActor.PutRequest("orange")
+    root ! FifoActor.PutRequest("banana")
 }
