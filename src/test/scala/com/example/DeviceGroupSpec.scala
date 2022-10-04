@@ -43,5 +43,63 @@ class DeviceGroupSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
             groupActor ! RequestTrackDevice("wrongGroup", "device1", probe.ref)
             probe.expectNoMessage()
         }
+        "be able to list active devices" in {
+            val registerdProbe = createTestProbe[DeviceRegisterd]()
+            val groupActor = spawn(DeviceGroup("group"))
+
+            groupActor ! RequestTrackDevice(
+              "group",
+              "device1",
+              registerdProbe.ref
+            )
+            registerdProbe.receiveMessage()
+            groupActor ! RequestTrackDevice(
+              "group",
+              "device2",
+              registerdProbe.ref
+            )
+            registerdProbe.receiveMessage()
+
+            val deviceListProbe = createTestProbe[ReplyDeviceList]()
+            groupActor ! RequestDeviceList(0, "group", deviceListProbe.ref)
+            deviceListProbe.expectMessage(
+              ReplyDeviceList(0, Set("device1", "device2"))
+            )
+        }
+        "be able to list active devices after one shuts down" in {
+            val registerdProbe = createTestProbe[DeviceRegisterd]()
+            val groupActor = spawn(DeviceGroup("group"))
+
+            groupActor ! RequestTrackDevice(
+              "group",
+              "device1",
+              registerdProbe.ref
+            )
+            val toShutDown = registerdProbe.receiveMessage().device
+            groupActor ! RequestTrackDevice(
+              "group",
+              "device2",
+              registerdProbe.ref
+            )
+            registerdProbe.receiveMessage()
+
+            val deviceListProbe = createTestProbe[ReplyDeviceList]()
+            groupActor ! RequestDeviceList(0, "group", deviceListProbe.ref)
+            deviceListProbe.expectMessage(
+              ReplyDeviceList(0, Set("device1", "device2"))
+            )
+
+            toShutDown ! Passivate
+            registerdProbe.expectTerminated(
+              toShutDown,
+              registerdProbe.remainingOrDefault
+            )
+            registerdProbe.awaitAssert {
+                groupActor ! RequestDeviceList(1, "group", deviceListProbe.ref)
+                deviceListProbe.expectMessage(
+                  ReplyDeviceList(1, Set("device2"))
+                )
+            }
+        }
     }
 }

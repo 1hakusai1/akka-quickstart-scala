@@ -55,6 +55,10 @@ class DeviceGroup(
                           s"device-$deviceId"
                         )
                         deviceIdToActor += deviceId -> deviceActor
+                        context.watchWith(
+                          deviceActor,
+                          DeviceTerminated(deviceActor, groupId, deviceId)
+                        )
                         replyTo ! DeviceRegisterd(deviceActor)
                 }
                 this
@@ -66,6 +70,20 @@ class DeviceGroup(
                 )
                 this
             }
+            case RequestDeviceList(requestId, gid, replyTo) =>
+                if (gid == groupId) {
+                    replyTo ! ReplyDeviceList(requestId, deviceIdToActor.keySet)
+                    this
+                } else {
+                    Behaviors.unhandled
+                }
+            case DeviceTerminated(_, _, deviceId) =>
+                context.log.info(
+                  "Device actor for {} has been terminated",
+                  deviceId
+                )
+                deviceIdToActor -= deviceId
+                this
         }
 
     override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
