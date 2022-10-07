@@ -1,11 +1,11 @@
 package com.example
 
 import akka.actor.typed.ActorRef
+import akka.actor.typed.Behavior
+import akka.actor.typed.PostStop
+import akka.actor.typed.Signal
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
-import akka.actor.typed.Behavior
-import akka.actor.typed.Signal
-import akka.actor.typed.PostStop
 
 object DeviceManager {
     sealed trait Command
@@ -26,6 +26,23 @@ object DeviceManager {
     final case class ReplyDeviceList(requestId: Long, ids: Set[String])
     private final case class DeviceGroupTerminated(groupId: String)
         extends Command
+
+    final case class RequestAllTemparature(
+        requestId: Long,
+        groupId: String,
+        replyTo: ActorRef[RespondAllTemparatures]
+    ) extends DeviceGroupQuery.Command
+        with DeviceGroup.Command
+        with Command
+    final case class RespondAllTemparatures(
+        requestId: Long,
+        temparatures: Map[String, TemparatureReading]
+    )
+    sealed trait TemparatureReading
+    final case class Temparature(value: Double) extends TemparatureReading
+    case object TemparatureNotAvailable extends TemparatureReading
+    case object DeviceNotAvailable extends TemparatureReading
+    case object DeviceTimedOut extends TemparatureReading
 }
 
 class DeviceManager(context: ActorContext[DeviceManager.Command])

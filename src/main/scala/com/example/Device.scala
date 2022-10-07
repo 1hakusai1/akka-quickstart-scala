@@ -17,7 +17,11 @@ object Device {
         requestId: Long,
         replyTo: ActorRef[RespondTemparature]
     ) extends Command
-    final case class RespondTemparature(requestId: Long, value: Option[Double])
+    final case class RespondTemparature(
+        requestId: Long,
+        deviceId: String,
+        value: Option[Double]
+    )
     final case class RecordTemparature(
         requestId: Long,
         value: Double,
@@ -49,7 +53,11 @@ class Device(
                 replyTo ! TemparatureRecorded(id)
                 this
             case ReadTemperature(id, replyTo) =>
-                replyTo ! RespondTemparature(id, lastTemparatureReading)
+                replyTo ! RespondTemparature(
+                  id,
+                  deviceId,
+                  lastTemparatureReading
+                )
                 this
             case Passivate =>
                 Behaviors.stopped
